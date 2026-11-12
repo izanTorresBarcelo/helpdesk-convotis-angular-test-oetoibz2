@@ -32,7 +32,7 @@ export class TicketsApi {
       requester: dto.requester,
       assignee: dto.assignee,
       createdAt: new Date(dto.created_at),
-      closedAt: dto.closed_at,
+      closedAt: dto.closed_at ? new Date(dto.closed_at) : null,
       comments: (dto.comments ?? []).map((c: any) => ({
         id: c.id,
         author: c.author,

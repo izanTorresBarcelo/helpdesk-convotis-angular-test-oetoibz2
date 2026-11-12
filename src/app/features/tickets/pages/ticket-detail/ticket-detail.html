@@ -33,10 +33,12 @@
 
     <section class="actions">
       <h2>Cambiar estado</h2>
-      @for (s of statuses; track s) {
-        <button (click)="changeStatus(s)" [disabled]="!canEdit() || saving() || s === t.status">
+      @for (s of allowedStatuses(); track s) {
+        <button (click)="changeStatus(s)" [disabled]="!canEdit() || saving()">
           {{ statusLabels[s] }}
         </button>
+      } @empty {
+        <p class="muted">No hay cambios de estado disponibles para este ticket.</p>
       }
       @if (statusError(); as msg) {
         <p class="error" role="alert">{{ msg }}</p>

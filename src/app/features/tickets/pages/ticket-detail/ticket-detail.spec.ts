@@ -76,6 +76,16 @@ describe('TicketDetail - cambio de estado', () => {
     }
   });
 
+  it('no envía transiciones no permitidas (open -> waiting_customer)', () => {
+    const fixture = TestBed.createComponent(TicketDetail);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/tickets/T-1007').flush(dto('open'));
+
+    fixture.componentInstance['changeStatus']('waiting_customer');
+
+    httpMock.expectNone({ method: 'PATCH', url: '/api/tickets/T-1007' });
+  });
+
   it('confirma el cambio cuando el servidor lo acepta', () => {
     const fixture = TestBed.createComponent(TicketDetail);
     fixture.detectChanges();

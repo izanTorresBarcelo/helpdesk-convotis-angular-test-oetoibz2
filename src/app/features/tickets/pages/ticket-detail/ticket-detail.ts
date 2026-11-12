@@ -22,6 +22,7 @@ import {
 import { TicketsApi } from '../../data/tickets-api';
 import { STATUS_LABELS, Ticket, TicketStatus } from '../../models/ticket';
 import { SLA_LABELS, slaState } from '../../domain/sla';
+import { allowedTransitions } from '../../domain/status-transitions';
 
 @Component({
   selector: 'app-ticket-detail',
@@ -37,7 +38,6 @@ export class TicketDetail {
   private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly statusLabels = STATUS_LABELS;
-  protected readonly statuses = Object.keys(STATUS_LABELS) as TicketStatus[];
   protected readonly slaLabels = SLA_LABELS;
 
   private readonly ticketId = this.route.snapshot.paramMap.get('id')!;
@@ -50,6 +50,11 @@ export class TicketDetail {
   protected readonly sla = computed(() => {
     const t = this.ticket();
     return t ? slaState(t) : null;
+  });
+  // Solo se ofrecen los estados permitidos por BUSINESS_RULES.md
+  protected readonly allowedStatuses = computed(() => {
+    const t = this.ticket();
+    return t ? allowedTransitions(t) : [];
   });
 
   protected readonly prevId = this.siblingId(-1);
@@ -97,7 +102,7 @@ export class TicketDetail {
       .pipe(
         filter((status) => {
           const t = this.ticket();
-          return !!t && t.status !== status;
+          return !!t && allowedTransitions(t).includes(status);
         }),
         // exhaustMap ignora nuevos clics mientras hay un cambio en curso
         exhaustMap((status) => {
