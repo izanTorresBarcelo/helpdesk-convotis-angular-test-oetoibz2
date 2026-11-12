@@ -20,8 +20,8 @@
   <p class="muted">Cargando tickets…</p>
 }
 
-@if (errorMessage) {
-  <p class="error">{{ errorMessage }}</p>
+@if (errorMessage(); as msg) {
+  <p class="error" role="alert">{{ msg }}</p>
 }
 
 <div class="list">

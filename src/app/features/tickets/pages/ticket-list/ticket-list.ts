@@ -24,8 +24,9 @@ export class TicketList {
   protected readonly statusFilter = signal<TicketStatus | 'all'>('all');
   protected readonly loading = signal(false);
 
+  protected readonly errorMessage = signal('');
+
   protected search = '';
-  protected errorMessage = '';
 
   constructor() {
     // Mantiene la lista filtrada sincronizada con los tickets y el filtro
@@ -44,14 +45,15 @@ export class TicketList {
 
   protected load(): void {
     this.loading.set(true);
-    this.errorMessage = '';
+    this.errorMessage.set('');
     this.api.search(this.search).subscribe({
       next: (tickets) => {
         this.tickets.set(tickets);
         this.loading.set(false);
       },
       error: () => {
-        this.errorMessage = 'No se han podido cargar los tickets.';
+        this.errorMessage.set('No se han podido cargar los tickets. Inténtalo de nuevo.');
+        this.loading.set(false);
       },
     });
   }
