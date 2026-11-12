@@ -51,10 +51,46 @@
     @for (c of t.comments; track c.id) {
       <div class="comment">
         <div class="muted">{{ c.author }} · {{ c.createdAt | date: 'short' }}</div>
-        <div [innerHTML]="html(c.bodyHtml)"></div>
+        <!-- Sanitizado por Angular: se eliminan scripts y atributos de evento (BUSINESS_RULES.md, sección 4) -->
+        <div [innerHTML]="c.bodyHtml"></div>
       </div>
     } @empty {
       <p class="muted">Todavía no hay comentarios.</p>
     }
   </section>
+
+  @if (canComment()) {
+    <section class="card comment-form">
+      <h2>Añadir comentario</h2>
+      <form [formGroup]="commentForm" (ngSubmit)="submitComment()" novalidate>
+        <label for="comment-body">Comentario</label>
+        <textarea
+          id="comment-body"
+          formControlName="body"
+          rows="4"
+          [readonly]="postingComment()"
+          [attr.aria-invalid]="commentForm.controls.body.touched && commentForm.controls.body.invalid"
+          aria-describedby="comment-hint comment-error"
+        ></textarea>
+
+        <div class="comment-hint muted" id="comment-hint">
+          {{ commentForm.controls.body.value.trim().length }}/{{ commentLimits.max }} caracteres · mínimo {{ commentLimits.min }}
+        </div>
+
+        @if (commentForm.controls.body.touched && commentErrorMessage(); as msg) {
+          <p class="error" id="comment-error" role="alert">{{ msg }}</p>
+        }
+
+        @if (commentError(); as msg) {
+          <p class="error" role="alert">{{ msg }}</p>
+        }
+
+        <button type="submit" [disabled]="postingComment()">
+          {{ postingComment() ? 'Enviando…' : 'Añadir comentario' }}
+        </button>
+      </form>
+    </section>
+  } @else {
+    <p class="card muted">Los comentarios no se pueden añadir a tickets cerrados.</p>
+  }
 }

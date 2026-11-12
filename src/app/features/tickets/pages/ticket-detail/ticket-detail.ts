@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import {
   EMPTY,
   Observable,
@@ -23,10 +23,21 @@ import { TicketsApi } from '../../data/tickets-api';
 import { STATUS_LABELS, Ticket, TicketStatus } from '../../models/ticket';
 import { SLA_LABELS, slaState } from '../../domain/sla';
 import { allowedTransitions } from '../../domain/status-transitions';
+import { CommentLengthError, canAddComment, commentLengthError, COMMENT_MAX_LENGTH, COMMENT_MIN_LENGTH } from '../../domain/comment-rules';
+
+const COMMENT_ERROR_MESSAGES: Record<CommentLengthError, string> = {
+  too_short: `El comentario debe tener al menos ${COMMENT_MIN_LENGTH} caracteres (sin contar espacios al inicio y al final).`,
+  too_long: `El comentario no puede superar los ${COMMENT_MAX_LENGTH} caracteres.`,
+};
+
+function commentValidator(control: AbstractControl): ValidationErrors | null {
+  const error = commentLengthError(control.value ?? '');
+  return error ? { length: error } : null;
+}
 
 @Component({
   selector: 'app-ticket-detail',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, ReactiveFormsModule],
   templateUrl: './ticket-detail.html',
   styleUrl: './ticket-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,10 +46,10 @@ export class TicketDetail {
   private readonly http = inject(HttpClient);
   private readonly api = inject(TicketsApi);
   private readonly route = inject(ActivatedRoute);
-  private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly slaLabels = SLA_LABELS;
+  protected readonly commentLimits = { min: COMMENT_MIN_LENGTH, max: COMMENT_MAX_LENGTH };
 
   private readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 
@@ -56,6 +67,17 @@ export class TicketDetail {
     const t = this.ticket();
     return t ? allowedTransitions(t) : [];
   });
+  protected readonly canComment = computed(() => {
+    const t = this.ticket();
+    return !!t && canAddComment(t);
+  });
+
+  // Formulario de comentario
+  protected readonly commentForm = new FormGroup({
+    body: new FormControl('', { nonNullable: true, validators: [commentValidator] }),
+  });
+  protected readonly postingComment = signal(false);
+  protected readonly commentError = signal<string | null>(null);
 
   protected readonly prevId = this.siblingId(-1);
   protected readonly nextId = this.siblingId(+1);
@@ -64,10 +86,13 @@ export class TicketDetail {
   private readonly refresh$ = new Subject<void>();
   // Cambios de estado solicitados por el usuario
   private readonly statusUpdate$ = new Subject<TicketStatus>();
+  // Envíos de comentario solicitados por el usuario
+  private readonly commentSubmit$ = new Subject<void>();
 
   constructor() {
     this.setupRefresh();
     this.setupStatusUpdates();
+    this.setupCommentSubmit();
   }
 
   private fetchTicket(): Observable<Ticket> {
@@ -131,13 +156,56 @@ export class TicketDetail {
       .subscribe();
   }
 
+  private setupCommentSubmit(): void {
+    this.commentSubmit$
+      .pipe(
+        filter(() => this.canComment() && this.commentForm.valid),
+        // exhaustMap ignora nuevos envíos mientras hay uno en curso (no se puede enviar dos veces)
+        exhaustMap(() => {
+          const current = this.ticket();
+          if (!current) return EMPTY;
+
+          const body = this.commentForm.controls.body.value.trim();
+          this.commentError.set(null);
+          this.postingComment.set(true);
+
+          return this.api.addComment(current.id, body).pipe(
+            tap((dto) => {
+              this.ticket.update((t) =>
+                t ? { ...t, comments: [...t.comments, this.api.toComment(dto)] } : t,
+              );
+              this.commentForm.reset();
+              // Sincroniza con el servidor y descarta cualquier refresco anterior en vuelo
+              this.refresh$.next();
+            }),
+            // Si falla, el texto se conserva en el formulario para que el usuario pueda reintentarlo
+            catchError(() => {
+              this.commentError.set(
+                'No se ha podido añadir el comentario. Tu texto se ha conservado; inténtalo de nuevo.',
+              );
+              return EMPTY;
+            }),
+            finalize(() => this.postingComment.set(false)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+  }
+
   protected changeStatus(status: TicketStatus): void {
     this.statusUpdate$.next(status);
   }
 
-  // Necesario para que se muestren el formato y las imágenes de los comentarios
-  protected html(value: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(value);
+  protected submitComment(): void {
+    this.commentForm.markAllAsTouched();
+    if (this.postingComment()) return;
+    this.commentSubmit$.next();
+  }
+
+  protected commentErrorMessage(): string | null {
+    const error = this.commentForm.controls.body.errors?.['length'] as CommentLengthError | undefined;
+    return error ? COMMENT_ERROR_MESSAGES[error] : null;
   }
 
   private siblingId(offset: number): string {

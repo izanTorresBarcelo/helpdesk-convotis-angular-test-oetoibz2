@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { Ticket, TicketStatus } from '../models/ticket';
+import { Ticket, TicketComment, TicketStatus } from '../models/ticket';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsApi {
@@ -33,12 +33,17 @@ export class TicketsApi {
       assignee: dto.assignee,
       createdAt: new Date(dto.created_at),
       closedAt: dto.closed_at ? new Date(dto.closed_at) : null,
-      comments: (dto.comments ?? []).map((c: any) => ({
-        id: c.id,
-        author: c.author,
-        bodyHtml: c.body_html,
-        createdAt: new Date(c.created_at),
-      })),
+      // Del más antiguo al más reciente (BUSINESS_RULES.md, sección 3)
+      comments: (dto.comments ?? []).map((c: any) => this.toComment(c)).sort((a: TicketComment, b: TicketComment) => a.createdAt.getTime() - b.createdAt.getTime()),
+    };
+  }
+
+  toComment(dto: any): TicketComment {
+    return {
+      id: dto.id,
+      author: dto.author,
+      bodyHtml: dto.body_html,
+      createdAt: new Date(dto.created_at),
     };
   }
 }
