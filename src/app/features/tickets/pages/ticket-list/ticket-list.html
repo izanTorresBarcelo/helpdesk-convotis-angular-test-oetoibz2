@@ -1,0 +1,33 @@
+<h1>Tickets</h1>
+
+<section class="toolbar card">
+  <input
+    type="search"
+    placeholder="Buscar por título o ID…"
+    [ngModel]="search"
+    (ngModelChange)="onSearch($event)"
+  />
+
+  <select (change)="statusFilter.set($any($event.target).value)">
+    <option value="all">Todos los estados</option>
+    @for (s of statuses; track s) {
+      <option [value]="s">{{ statusLabels[s] }}</option>
+    }
+  </select>
+</section>
+
+@if (loading()) {
+  <p class="muted">Cargando tickets…</p>
+}
+
+@if (errorMessage) {
+  <p class="error">{{ errorMessage }}</p>
+}
+
+<div class="list">
+  @for (ticket of filtered(); track $index) {
+    <app-ticket-row [ticket]="ticket" (click)="open(ticket)" />
+  } @empty {
+    <p class="muted">No hay tickets que mostrar.</p>
+  }
+</div>

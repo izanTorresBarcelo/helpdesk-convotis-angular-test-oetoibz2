@@ -1,0 +1,5 @@
+:host { display: block; }
+h1 { margin: 0 0 16px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.toolbar input { flex: 1; min-width: 220px; }
+.list { display: grid; gap: 8px; }

@@ -1,0 +1,13 @@
+:host { display: grid; gap: 16px; }
+.nav { display: flex; gap: 16px; align-items: center; }
+.spacer { flex: 1; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+h1 { margin: 4px 0 8px; font-size: 24px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+.status { background: #eef1f7; border-radius: 99px; padding: 4px 12px; font-size: 13px; }
+.meta { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 16px 0; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions h2 { width: 100%; }
+.comment { padding: 10px 0; border-top: 1px solid var(--border); }

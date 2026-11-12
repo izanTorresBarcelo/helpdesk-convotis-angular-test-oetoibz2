@@ -1,0 +1,53 @@
+<nav class="nav">
+  <a routerLink="/tickets">← Volver al listado</a>
+  <span class="spacer"></span>
+  <a [routerLink]="['/tickets', prevId]">‹ Anterior</a>
+  <a [routerLink]="['/tickets', nextId]">Siguiente ›</a>
+</nav>
+
+@if (notFound()) {
+  <p class="card error">Ticket no encontrado.</p>
+}
+
+@if (ticket(); as t) {
+  <article class="card">
+    <header class="head">
+      <div>
+        <span class="muted">{{ t.id }}</span>
+        <h1>{{ t.title }}</h1>
+      </div>
+      <span class="status">{{ statusLabels[t.status] }}</span>
+    </header>
+
+    <p>{{ t.description }}</p>
+
+    <dl class="meta">
+      <dt>Prioridad</dt><dd>{{ t.priority }}</dd>
+      <dt>Solicitante</dt><dd>{{ t.requester }}</dd>
+      <dt>Asignado a</dt><dd>{{ t.assignee ?? 'Sin asignar' }}</dd>
+      <dt>Creado</dt><dd>{{ t.createdAt | date: 'medium' }}</dd>
+      <dt>SLA</dt><dd>{{ sla() }}</dd>
+    </dl>
+
+    <section class="actions">
+      <h2>Cambiar estado</h2>
+      @for (s of statuses; track s) {
+        <button (click)="changeStatus(s)" [disabled]="!canEdit() || s === t.status">
+          {{ statusLabels[s] }}
+        </button>
+      }
+    </section>
+  </article>
+
+  <section class="card comments">
+    <h2>Comentarios ({{ t.comments.length }})</h2>
+    @for (c of t.comments; track c.id) {
+      <div class="comment">
+        <div class="muted">{{ c.author }} · {{ c.createdAt | date: 'short' }}</div>
+        <div [innerHTML]="html(c.bodyHtml)"></div>
+      </div>
+    } @empty {
+      <p class="muted">Todavía no hay comentarios.</p>
+    }
+  </section>
+}
