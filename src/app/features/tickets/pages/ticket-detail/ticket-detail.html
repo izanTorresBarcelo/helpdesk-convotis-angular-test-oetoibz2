@@ -34,9 +34,12 @@
     <section class="actions">
       <h2>Cambiar estado</h2>
       @for (s of statuses; track s) {
-        <button (click)="changeStatus(s)" [disabled]="!canEdit() || s === t.status">
+        <button (click)="changeStatus(s)" [disabled]="!canEdit() || saving() || s === t.status">
           {{ statusLabels[s] }}
         </button>
+      }
+      @if (statusError(); as msg) {
+        <p class="error" role="alert">{{ msg }}</p>
       }
     </section>
   </article>
