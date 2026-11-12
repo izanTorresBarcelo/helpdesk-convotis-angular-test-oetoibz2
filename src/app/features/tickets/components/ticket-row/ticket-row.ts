@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { STATUS_LABELS, Ticket } from '../../models/ticket';
-import { slaState } from '../../domain/sla';
+import { SLA_LABELS, slaState } from '../../domain/sla';
 
 @Component({
   selector: 'app-ticket-row',
@@ -18,7 +18,9 @@ import { slaState } from '../../domain/sla';
           {{ statusLabel() }} · {{ ticket().requester }} · {{ ticket().createdAt | date: 'short' }}
         </div>
       </div>
-      <span class="sla" [class]="'sla ' + sla()">{{ sla() }}</span>
+      @if (sla(); as s) {
+        <span class="sla" [class]="'sla ' + s">{{ slaLabels[s] }}</span>
+      }
     </div>
   `,
   styles: `
@@ -37,6 +39,7 @@ import { slaState } from '../../domain/sla';
 })
 export class TicketRow {
   readonly ticket = input.required<Ticket>();
+  protected readonly slaLabels = SLA_LABELS;
 
   statusLabel() {
     return STATUS_LABELS[this.ticket().status];

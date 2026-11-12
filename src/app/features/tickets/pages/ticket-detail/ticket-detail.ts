@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { TicketsApi } from '../../data/tickets-api';
 import { STATUS_LABELS, Ticket, TicketStatus } from '../../models/ticket';
-import { slaState } from '../../domain/sla';
+import { SLA_LABELS, slaState } from '../../domain/sla';
 
 @Component({
   selector: 'app-ticket-detail',
@@ -22,6 +22,7 @@ export class TicketDetail {
 
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly statuses = Object.keys(STATUS_LABELS) as TicketStatus[];
+  protected readonly slaLabels = SLA_LABELS;
 
   private readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 

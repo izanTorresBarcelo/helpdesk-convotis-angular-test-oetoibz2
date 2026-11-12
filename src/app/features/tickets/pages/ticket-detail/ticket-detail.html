@@ -26,7 +26,9 @@
       <dt>Solicitante</dt><dd>{{ t.requester }}</dd>
       <dt>Asignado a</dt><dd>{{ t.assignee ?? 'Sin asignar' }}</dd>
       <dt>Creado</dt><dd>{{ t.createdAt | date: 'medium' }}</dd>
-      <dt>SLA</dt><dd>{{ sla() }}</dd>
+      @if (sla(); as s) {
+        <dt>SLA</dt><dd>{{ slaLabels[s] }}</dd>
+      }
     </dl>
 
     <section class="actions">
