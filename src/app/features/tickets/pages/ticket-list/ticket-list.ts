@@ -1,9 +1,14 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { EMPTY, Subject, catchError, debounceTime, distinctUntilChanged, map, merge, of, switchMap, tap } from 'rxjs';
 import { TicketsApi } from '../../data/tickets-api';
 import { STATUS_LABELS, Ticket, TicketStatus } from '../../models/ticket';
 import { TicketRow } from '../../components/ticket-row/ticket-row';
+
+/** Tiempo sin teclear antes de buscar en el servidor. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-ticket-list',
@@ -23,10 +28,10 @@ export class TicketList {
   protected readonly filtered = signal<Ticket[]>([]);
   protected readonly statusFilter = signal<TicketStatus | 'all'>('all');
   protected readonly loading = signal(false);
-
   protected readonly errorMessage = signal('');
 
   protected search = '';
+  private readonly search$ = new Subject<string>();
 
   constructor() {
     // Mantiene la lista filtrada sincronizada con los tickets y el filtro
@@ -35,27 +40,40 @@ export class TicketList {
       this.filtered.set(this.tickets().filter((t) => status === 'all' || t.status === status));
     });
 
-    this.load();
+    this.setupSearch();
   }
 
   protected onSearch(term: string): void {
     this.search = term;
-    this.load();
+    this.search$.next(term);
   }
 
-  protected load(): void {
-    this.loading.set(true);
-    this.errorMessage.set('');
-    this.api.search(this.search).subscribe({
-      next: (tickets) => {
+  private setupSearch(): void {
+    // Carga inicial (sin texto) y búsquedas posteriores tras una pausa al teclear
+    merge(of(this.search), this.search$.pipe(debounceTime(SEARCH_DEBOUNCE_MS)))
+      .pipe(
+        distinctUntilChanged(),
+        tap(() => {
+          this.loading.set(true);
+          this.errorMessage.set('');
+        }),
+        // switchMap cancela la petición anterior: una respuesta antigua nunca pisa a la actual
+        switchMap((term) =>
+          this.api.search(term).pipe(
+            map((tickets) => ({ tickets })),
+            catchError(() => {
+              this.errorMessage.set('No se han podido cargar los tickets. Inténtalo de nuevo.');
+              this.loading.set(false);
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe(({ tickets }) => {
         this.tickets.set(tickets);
         this.loading.set(false);
-      },
-      error: () => {
-        this.errorMessage.set('No se han podido cargar los tickets. Inténtalo de nuevo.');
-        this.loading.set(false);
-      },
-    });
+      });
   }
 
   protected open(ticket: Ticket): void {
